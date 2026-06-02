@@ -1,23 +1,121 @@
 # Traffilk V2
 
+[🇷🇺 Читать на русском](#русская-версия) | [🇬🇧 Read in English](#english-version)
+
+---
+
+## Русская Версия
+
+Легкий, красивый и безопасный дашборд для мониторинга трафика с помощью Prometheus Node Exporter.
+Traffilk подключается к вашим серверам с метриками Prometheus и агрегирует входящий/исходящий сетевой трафик за каждый день.
+
+В версии V2 полностью переработан пользовательский интерфейс (в стиле Uptime Kuma) и добавлена встроенная JWT-авторизация.
+
+### Особенности
+- **Красивый интерфейс в стиле Uptime Kuma**: Темная тема, закругленные элементы, адаптивный дизайн.
+- **Безопасный доступ**: Встроенный экран входа с использованием JWT токенов.
+- **Быстрые обновления**: Опрашивает ноды каждую минуту для отображения графиков в реальном времени.
+- **Мультиязычность**: Полный перевод интерфейса на русский (RU) и английский (EN) языки.
+- **Простое управление**: Добавляйте, изменяйте и удаляйте ноды прямо из браузера.
+
+### 🚀 Установка (Docker)
+
+1. Склонируйте репозиторий:
+   ```bash
+   git clone https://github.com/alexporteb/traefikk.git
+   cd traefikk
+   ```
+
+2. Откройте `docker-compose.yml` и задайте свои логин и пароль в секции `environment`:
+   ```yaml
+   environment:
+     - ADMIN_USER=admin
+     - ADMIN_PASS=your_secure_password
+     - JWT_SECRET=change-this-secret
+   ```
+
+3. Запустите контейнер:
+   ```bash
+   docker compose up -d
+   ```
+
+4. Панель будет доступна по адресу `http://localhost:8080/ui/`.
+
+---
+
+### 🌐 Настройка Nginx / Caddy (Обратный прокси)
+
+Чтобы Traffilk был доступен по красивому домену с HTTPS, используйте один из этих конфигов.
+Обратите внимание, что Traffilk работает с подпутями (например, `/traffilk/`), если вам нужно повесить его не на главный домен.
+
+#### Пример Caddyfile:
+```caddyfile
+# Если ставите на отдельный поддомен:
+traffilk.yourdomain.com {
+    reverse_proxy localhost:8080
+}
+
+# Если ставите в папку существующего домена (например, yourdomain.com/traffilk/):
+yourdomain.com {
+    route /traffilk/* {
+        uri strip_prefix /traffilk
+        reverse_proxy localhost:8080
+    }
+}
+```
+
+#### Пример Nginx:
+```nginx
+server {
+    listen 80;
+    server_name traffilk.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+---
+
+### 🖥️ Настройка других нод (Серверов)
+
+Чтобы Traffilk мог собирать статистику с других ваших серверов, на них должен работать `node_exporter`. Мы подготовили скрипт для быстрой установки.
+
+Зайдите на **другой** сервер (с которого хотите собирать трафик) и выполните:
+```bash
+wget https://raw.githubusercontent.com/alexporteb/traefikk/main/install_node_exporter.sh
+chmod +x install_node_exporter.sh
+./install_node_exporter.sh
+```
+После установки метрики будут доступны по адресу `http://<IP_ЭТОГО_СЕРВЕРА>:9100/metrics`.
+Добавьте этот URL в панели Traffilk (кнопка "Добавить сервер").
+
+*Примечание: При первом добавлении график покажет 0 байт, так как для расчета дневного трафика системе нужно подождать 1 минуту и сделать второй замер.*
+
+<br><br><br>
+
+---
+
+## English Version
+
 A lightweight, beautiful, and secure traffic monitoring dashboard for Prometheus Node Exporter.
 Traffilk connects to your existing Prometheus metrics endpoints to fetch and aggregate daily incoming/outgoing network traffic. 
 
 V2 features a completely redesigned user interface (inspired by Uptime Kuma) and built-in JWT authentication.
 
-## Features
-
+### Features
 - **Beautiful Uptime Kuma-inspired UI**: Dark theme, rounded components, responsive design.
 - **Secure Access**: Built-in login screen using JWT cookies.
 - **Fast Updates**: Polls nodes every minute to provide real-time traffic deltas.
 - **Multi-Language Support**: Fully translated in English (EN) and Russian (RU).
 - **Easy Management**: Add, Edit, and Delete nodes seamlessly.
 
-## Prerequisites
-
-Each node you want to monitor must be running `node_exporter` (specifically exposing `node_network_receive_bytes_total` and `node_network_transmit_bytes_total`).
-
-## Quick Start (Docker)
+### 🚀 Quick Start (Docker)
 
 1. Clone the repository:
    ```bash
@@ -38,22 +136,57 @@ Each node you want to monitor must be running `node_exporter` (specifically expo
    docker compose up -d
    ```
 
-4. Access the dashboard:
-   Open your browser and navigate to `http://localhost:8080/ui/` (or your reverse proxy domain).
+4. Access the dashboard at `http://localhost:8080/ui/`.
 
-## Adding Nodes
+---
 
-1. Log in using your `ADMIN_USER` and `ADMIN_PASS`.
-2. Click **Add New Monitor** in the sidebar.
-3. Enter a **Friendly Name** (e.g., `Web Server`).
-4. Enter the **Prometheus URL** (e.g., `https://your-node.com/metrics`).
-5. Click **Save**.
+### 🌐 Reverse Proxy Setup (Caddy / Nginx)
 
-*Note: Traffilk will instantly poll the node upon adding or editing it. If this is a new node, the chart will show 0 bytes for the current day because it needs at least two data points (1 minute apart) to calculate the traffic delta.*
+#### Caddy Example:
+```caddyfile
+# Root domain
+traffilk.yourdomain.com {
+    reverse_proxy localhost:8080
+}
 
-## Technical Details
+# Subfolder path (/traffilk/)
+yourdomain.com {
+    route /traffilk/* {
+        uri strip_prefix /traffilk
+        reverse_proxy localhost:8080
+    }
+}
+```
 
-- **Backend**: Go (Gin framework, SQLite)
-- **Frontend**: HTML5, Vue 3, TailwindCSS, Chart.js
-- **Metrics Parser**: Custom lightweight HTTP scanner (no heavy Prometheus libraries required)
-- **Database**: SQLite (stored in `./data/data.db`)
+#### Nginx Example:
+```nginx
+server {
+    listen 80;
+    server_name traffilk.yourdomain.com;
+
+    location / {
+        proxy_pass http://localhost:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+---
+
+### 🖥️ Setting Up Remote Nodes
+
+For Traffilk to monitor other servers, you need to install `node_exporter` on them. You can use the provided quick installation script.
+
+SSH into your **remote** server and run:
+```bash
+wget https://raw.githubusercontent.com/alexporteb/traefikk/main/install_node_exporter.sh
+chmod +x install_node_exporter.sh
+./install_node_exporter.sh
+```
+Once installed, metrics will be available at `http://<NODE_IP>:9100/metrics`.
+Go to your Traffilk dashboard and add this URL via the "Add New Monitor" button.
+
+*Note: The chart will initially show 0 bytes for a new node. Traffilk requires at least 1 minute to take a second measurement and calculate the daily traffic delta.*
