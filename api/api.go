@@ -22,8 +22,8 @@ func SetupRouter() *gin.Engine {
 		if path == "/ui" || (len(path) >= 4 && path[:4] == "/ui/") {
 			_, err := c.Cookie("token")
 			if err != nil {
-				c.Redirect(http.StatusFound, "../login")
-				c.Abort()
+				c.Header("Location", "../login")
+				c.AbortWithStatus(http.StatusFound)
 				return
 			}
 		}
