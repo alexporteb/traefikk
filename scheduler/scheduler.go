@@ -13,8 +13,8 @@ var c *cron.Cron
 func Start() {
 	c = cron.New()
 	
-	// Run every hour
-	_, err := c.AddFunc("@hourly", func() {
+	// Run every minute
+	_, err := c.AddFunc("* * * * *", func() {
 		PollAllNodes()
 	})
 	if err != nil {

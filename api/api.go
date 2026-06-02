@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"traffilk/db"
+	"traffilk/scheduler"
 
 	"github.com/gin-gonic/gin"
 )
@@ -73,6 +74,10 @@ func addNode(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	
+	// Trigger an immediate poll so the user doesn't have to wait for the next cron job
+	go scheduler.PollAllNodes()
+	
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
 
