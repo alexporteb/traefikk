@@ -100,14 +100,37 @@ curl -sL https://raw.githubusercontent.com/alexporteb/traefikk/main/uninstall_no
 
 После установки метрики будут доступны по адресу `http://<IP_ЭТОГО_СЕРВЕРА>:9100/metrics`.
 
-#### Защита метрик через Caddy (Рекомендуется)
-Оставлять порт 9100 открытым по HTTP небезопасно. Рекомендуется спрятать его за обратным прокси на удалённой ноде, чтобы получить защищенный HTTPS-доступ:
+#### Защита метрик через Caddy / Nginx (Рекомендуется)
+Оставлять порт 9100 открытым по HTTP небезопасно. Рекомендуется спрятать его за обратным прокси на удалённой ноде, чтобы получить защищенный HTTPS-доступ. Вы также можете разрешить доступ только для IP-адреса вашего главного сервера Traffilk.
+
+**Пример для Caddy:**
 ```caddyfile
 node1.yourdomain.com {
+    # Опционально: Разрешить доступ только главному серверу Traffilk (IP: 123.45.67.89)
+    # @blocked not remote_ip 123.45.67.89
+    # respond @blocked "Access Denied" 403
+
     reverse_proxy localhost:9100
 }
 ```
-После этого добавьте эту безопасную ссылку в панели Traffilk: `https://node1.yourdomain.com/metrics`.
+
+**Пример для Nginx:**
+```nginx
+server {
+    listen 80; # Или 443 с настроенным SSL
+    server_name node1.yourdomain.com;
+
+    location / {
+        # Опционально: Разрешить доступ только главному серверу Traffilk (IP: 123.45.67.89)
+        # allow 123.45.67.89;
+        # deny all;
+
+        proxy_pass http://localhost:9100;
+    }
+}
+```
+
+После этого добавьте безопасную ссылку в панели Traffilk: `https://node1.yourdomain.com/metrics`.
 
 *Примечание: При первом добавлении график покажет 0 байт, так как для расчета дневного трафика системе нужно подождать 1 минуту и сделать второй замер.*
 
@@ -208,13 +231,36 @@ curl -sL https://raw.githubusercontent.com/alexporteb/traefikk/main/uninstall_no
 
 Once installed, metrics will be available at `http://<NODE_IP>:9100/metrics`.
 
-#### Securing Metrics with Caddy (Recommended)
-Exposing port 9100 directly over HTTP is insecure. It's recommended to proxy it through Caddy on your remote node to get automatic HTTPS:
+#### Securing Metrics with Caddy / Nginx (Recommended)
+Exposing port 9100 directly over HTTP is insecure. It's recommended to proxy it through Caddy or Nginx on your remote node to get automatic HTTPS. You can optionally restrict access to only your main Traffilk server's IP address.
+
+**Caddy Example:**
 ```caddyfile
 node1.yourdomain.com {
+    # Optional: Allow access ONLY from your main Traffilk server (IP: 123.45.67.89)
+    # @blocked not remote_ip 123.45.67.89
+    # respond @blocked "Access Denied" 403
+
     reverse_proxy localhost:9100
 }
 ```
+
+**Nginx Example:**
+```nginx
+server {
+    listen 80; # Or 443 with SSL
+    server_name node1.yourdomain.com;
+
+    location / {
+        # Optional: Allow access ONLY from your main Traffilk server (IP: 123.45.67.89)
+        # allow 123.45.67.89;
+        # deny all;
+
+        proxy_pass http://localhost:9100;
+    }
+}
+```
+
 Then, add the node in Traffilk using the secure URL: `https://node1.yourdomain.com/metrics`.
 
 *Note: The chart will initially show 0 bytes for a new node. Traffilk requires at least 1 minute to take a second measurement and calculate the daily traffic delta.*
