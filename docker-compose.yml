@@ -1,6 +1,6 @@
 services:
   traffilk:
-    image: ghcr.io/alexporteb/traffilk:latest
+    build: .
     container_name: traffilk
     restart: unless-stopped
     ports:
