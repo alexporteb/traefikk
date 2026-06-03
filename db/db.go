@@ -11,9 +11,10 @@ import (
 var DB *sql.DB
 
 type Node struct {
-	ID   int    `json:"id"`
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	ID     int    `json:"id"`
+	Name   string `json:"name"`
+	URL    string `json:"url"`
+	Status string `json:"status"`
 }
 
 type TrafficLog struct {
@@ -63,6 +64,9 @@ func createTables() {
 		log.Fatal("Failed to create nodes table:", err)
 	}
 
+	// Safe migration: add status column if it doesn't exist
+	DB.Exec("ALTER TABLE nodes ADD COLUMN status TEXT DEFAULT 'unknown'")
+
 	_, err = DB.Exec(trafficTable)
 	if err != nil {
 		log.Fatal("Failed to create traffic_logs table:", err)
@@ -71,7 +75,7 @@ func createTables() {
 
 // GetNodes returns all nodes
 func GetNodes() ([]Node, error) {
-	rows, err := DB.Query("SELECT id, name, url FROM nodes")
+	rows, err := DB.Query("SELECT id, name, url, status FROM nodes")
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +84,7 @@ func GetNodes() ([]Node, error) {
 	var nodes []Node
 	for rows.Next() {
 		var n Node
-		err := rows.Scan(&n.ID, &n.Name, &n.URL)
+		err := rows.Scan(&n.ID, &n.Name, &n.URL, &n.Status)
 		if err != nil {
 			return nil, err
 		}
@@ -100,6 +104,12 @@ func AddNode(n Node) error {
 func UpdateNode(id int, name, url string) error {
 	_, err := DB.Exec("UPDATE nodes SET name = ?, url = ? WHERE id = ?",
 		name, url, id)
+	return err
+}
+
+// UpdateNodeStatus updates the online/offline status of a node
+func UpdateNodeStatus(id int, status string) error {
+	_, err := DB.Exec("UPDATE nodes SET status = ? WHERE id = ?", status, id)
 	return err
 }
 

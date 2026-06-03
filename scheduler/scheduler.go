@@ -40,6 +40,7 @@ func PollAllNodes() {
 		rx, tx, err := scraper.ReadPrometheusMetrics(node.URL)
 		if err != nil {
 			log.Printf("Error polling node %s (%s): %v\n", node.Name, node.URL, err)
+			db.UpdateNodeStatus(node.ID, "down")
 			continue
 		}
 
@@ -47,6 +48,7 @@ func PollAllNodes() {
 		if err != nil {
 			log.Printf("Error saving traffic log for node %s: %v\n", node.Name, err)
 		} else {
+			db.UpdateNodeStatus(node.ID, "up")
 			log.Printf("Successfully polled node %s: RX %d, TX %d\n", node.Name, rx, tx)
 		}
 	}
