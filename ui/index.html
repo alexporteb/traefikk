@@ -255,7 +255,7 @@
     </div>
 
     <script>
-        const { createApp } = Vue
+        const { createApp, markRaw } = Vue
 
         const translations = {
             en: {
@@ -559,7 +559,7 @@
                     const rxData = this.trafficData.map(d => d.rx_bytes / (1024 * 1024))
                     const txData = this.trafficData.map(d => d.tx_bytes / (1024 * 1024))
 
-                    this.chartInstance = new Chart(ctx, {
+                    this.chartInstance = markRaw(new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: labels,
