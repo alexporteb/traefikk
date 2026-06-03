@@ -67,9 +67,23 @@
     </style>
 </head>
 <body>
-    <div id="app" class="flex h-screen w-full">
+    <div id="app" class="flex flex-col md:flex-row h-screen w-full">
+        <!-- Mobile Header -->
+        <div class="md:hidden flex items-center justify-between p-4 bg-kuma-card border-b border-kuma-border z-20">
+            <div class="flex items-center gap-2">
+                <img src="https://raw.githubusercontent.com/louislam/uptime-kuma/master/public/icon.svg" class="w-8 h-8 rounded" alt="Logo">
+                <h1 class="text-xl font-bold text-white">Traffilk</h1>
+            </div>
+            <button @click="showMobileMenu = !showMobileMenu" class="text-white p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+        </div>
+
+        <!-- Mobile Overlay -->
+        <div v-if="showMobileMenu" @click="showMobileMenu = false" class="fixed inset-0 bg-black/50 z-30 md:hidden backdrop-blur-sm"></div>
+
         <!-- Sidebar -->
-        <aside class="w-80 border-r border-kuma-border bg-kuma-bg flex flex-col z-10">
+        <aside :class="['fixed md:relative inset-y-0 left-0 z-40 w-80 border-r border-kuma-border bg-kuma-bg flex flex-col transition-transform duration-300 transform', showMobileMenu ? 'translate-x-0' : '-translate-x-full md:translate-x-0']">
             <!-- Header -->
             <div class="p-4 flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -275,7 +289,8 @@
                     newNode: { name: '', url: '' },
                     chartInstance: null,
                     trafficData: [],
-                    currentLang: localStorage.getItem('traffilk_lang') || 'en'
+                    currentLang: localStorage.getItem('traffilk_lang') || 'en',
+                    showMobileMenu: false
                 }
             },
             computed: {
@@ -345,6 +360,19 @@
                 },
                 async saveNode() {
                     try {
+                        // Auto-format URL
+                        let formattedUrl = this.newNode.url.trim();
+                        if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+                            formattedUrl = 'https://' + formattedUrl;
+                        }
+                        if (!formattedUrl.endsWith('/metrics')) {
+                            if (formattedUrl.endsWith('/')) {
+                                formattedUrl = formattedUrl.slice(0, -1);
+                            }
+                            formattedUrl += '/metrics';
+                        }
+                        this.newNode.url = formattedUrl;
+
                         let res;
                         if (this.isEditMode) {
                             res = await fetch(`../api/nodes/${this.editingId}`, {
@@ -391,15 +419,22 @@
                 async selectNode(node) {
                     this.selectedNode = node
                     this.trafficData = []
+                    this.showMobileMenu = false // Close mobile menu when a node is selected
                     await this.fetchTraffic()
                 },
                 async fetchTraffic() {
                     if (!this.selectedNode) return
+                    const currentId = this.selectedNode.id
                     try {
-                        const res = await fetch(`../api/nodes/${this.selectedNode.id}/traffic`)
+                        const res = await fetch(`../api/nodes/${currentId}/traffic`)
                         if (res.status === 401) { window.location.href = '../login'; return; }
-                        this.trafficData = await res.json() || []
-                        this.renderChart()
+                        const data = await res.json() || []
+                        
+                        // Prevent race condition: only render if the user hasn't clicked another node while fetching
+                        if (this.selectedNode && this.selectedNode.id === currentId) {
+                            this.trafficData = data
+                            this.renderChart()
+                        }
                     } catch (e) {
                         console.error('Failed to fetch traffic:', e)
                     }
